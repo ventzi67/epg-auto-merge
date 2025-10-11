@@ -3,7 +3,7 @@ name: Daily EPG Merge
 on:
   schedule:
     - cron: "0 3 * * *"      # every day at 03:00 UTC
-  workflow_dispatch:
+  workflow_dispatch:          # allow manual run
 
 permissions:
   contents: write
