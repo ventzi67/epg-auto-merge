@@ -1,0 +1,49 @@
+name: Daily EPG Merge
+
+on:
+  schedule:
+    - cron: "0 3 * * *"      # every day at 03:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Run merge script
+        run: python merge_epg.py
+
+      - name: Commit and push updated EPG
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -e
+          # ---- fresh clone ensures we are on the real branch ----
+          rm -rf repo
+          git clone --depth 1 https://x-access-token:${GITHUB_TOKEN}@github.com/${REPO}.git repo
+          cd repo
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # copy new file into this real clone
+          cp ../merged_epg.xml ./merged_epg.xml
+
+          # commit only if changed
+          git add merged_epg.xml
+          git diff --cached --quiet && echo "No changes to commit" || git commit -m "Auto-update merged EPG"
+
+          # push safely (no detached state now)
+          git push origin main
